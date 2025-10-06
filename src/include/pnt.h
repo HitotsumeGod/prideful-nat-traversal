@@ -31,11 +31,11 @@ struct std_conn {
  * Thus, this function attempts to establish communication between the peers
  * via this predicted mapping.
  * @param address the IPv4 address for the NAT device of the target host
- * @param results a double-pointer buffer to which the results of the operation
- * will be passed.
+ * @param results a buffer to which the results of the operation will be
+ * passed.
  * @return a struct errep pointer to be used for debugging
  */
-extern struct errep *pnt_traverse_invictus(struct in_addr *address, struct std_conn **results);
-extern struct errep *pnt_traverse_severain(struct sockaddr_in *address, struct std_conn **results);
+extern struct errep *pnt_traverse_invictus(struct in_addr address, struct std_conn *results);
+extern struct errep *pnt_traverse_severain(struct sockaddr_in address, struct std_conn *results);
 
 #endif //__PNT_H___
