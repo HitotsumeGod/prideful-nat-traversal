@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.15...4.00)
+project(prideful 
+	DESCRIPTION "Superior method of NAT traversal"
+	LANGUAGES C)
+set(SRC ${PROJECT_SOURCE_DIR}/src/main)
+set(HDRS ${PROJECT_SOURCE_DIR}/src/include)
+set(DEPS ${PROJECT_SOURCE_DIR}/vendors)
+add_subdirectory(${DEPS}/ptools ${DEPS}/ptools/build)
+add_library(prideful SHARED
+		${SRC}/nt.c)
+target_include_directories(prideful PUBLIC ${HDRS})
+target_link_libraries(prideful ptools)

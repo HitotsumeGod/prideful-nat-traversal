@@ -1,0 +1,15 @@
+Prideful NAT Traversal: Firehose Strategy
+Peter Naylor
+October 5, 2025
+
+Basically we have each peer constantly ping each port on each other's NAT device
+(typically a standard home router), which in theory should establish stateful
+firewall rules for every possible ip:port pairing from peer to peer; if the
+peers routinely send packets such that more packets are sent to each port before
+the rules expire, a packet will eventually make it through. Upon this happening,
+the recipient peer will immediately stop spraying their firehose, and instead
+note its peer's ip:port pair, received via the packet, and begin directing
+traffic to that port. Even sooner, a packet will be received by that peer, which
+will perform the same process with its peer, until both peers have exchanged an
+ACK packet with one another, confirming the connection. From here, NAT traversal
+has been performed; communication is now possible.

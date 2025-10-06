@@ -1,0 +1,40 @@
+Prideful Nat Traversal
+Peter Naylor
+October 5, 2025
+
+The most commonly employed solution in Network Address Translation traversal,
+often absolutely essential for P2P networking options, is the Session Traversal
+Utilities for NAT (or STUN) protocol, which, in practice, involves leveraging a
+STUN-compliant program on a remote server for NAT mapping enumeration. Indeed,
+at this point, our own P2P application, the instant messenger Swiss,
+accomplishes its traversal via contacting a remote STUN server. STUN is
+undoubtedly a valuable and useful method of easily and efficiently resolving
+traversal issues, while expending a minimal amount of system resources. Despite
+this, however, it violates a fundamental concept of idealized P2P networking,
+and for this, it cannot be forgiven.
+
+The ideal of a P2P system is to facilitate a network connection between two
+arbitrary peers located on arbitrary subnets (with the word subnet being used
+incredibly loosely here to essentially refer to anything from a Metropolitan
+Area Network to a router-managed home network) without requiring the services of
+any other host on any other network; in essence, in an ideal P2P solution, the
+two peers ought be able to interact as though they are the only hosts in
+existence (sans whatever routing hosts/links/relays might be necessary to move
+the network data along in the first place, which obviously cannot be replaced in
+any networking solution that does not wish to upend the entire status quo).
+STUN's violation of this ideal is obvious: it possesses a fundamental
+client-server structure, where the server must by definition not be the peer
+with whom which communication is desired. Thus, a STUN solution demands
+acknowledging the existence of other hosts, which is anathema to the P2P ideal
+described above.
+
+We propose a new solution to NAT traversal that adheres strictly to the
+idealized principles of P2P networking: Prideful Nat Traversal. Our method, as
+the name suggests, returns traversal's pride to it, freeing it from needing to
+rely on the strengths of others, and giving it the tools to succeed as an
+independent agent in the networking world. Our method does not intend to replace
+or supercede more heretical styles such as STUN; such options will always be
+more effective and effecient, due to relying on external services allowing for a
+much lower margin of error in employed traversal strategies. Nevertheless,
+Prideful NT aims to be the de facto solution for circumventing NATted networks
+in a pure P2P environment. 
