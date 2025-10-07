@@ -36,6 +36,6 @@ struct std_conn {
  * @return a struct errep pointer to be used for debugging
  */
 extern struct errep *pnt_traverse_invictus(struct in_addr address, struct std_conn *results);
-extern struct errep *pnt_traverse_severain(struct sockaddr_in address, struct std_conn *results);
+extern struct errep *pnt_traverse_severain(struct in_addr address, struct std_conn *results);
 
 #endif //__PNT_H___

@@ -4,24 +4,24 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
 
 #define PNT_BINDPORT 	8668
 
-struct errep *pnt_traverse_invictus(struct in_addr *address, struct std_conn *res)
+struct errep *pnt_traverse_invictus(struct in_addr address, struct std_conn *res)
 {
 	struct errep *err;
 	char *fnname = "pnt_traverse_invictus()";
 	socket_t sock;
 	struct sockaddr_in dest, tobind, reply;
 	char *msg = "PLEASE STOP LYING", buf[strlen(msg)];
-	bool received;
 	socklen_t siz = sizeof(struct sockaddr);
 	
 	dest.sin_family = AF_INET;
 	dest.sin_port = PNT_BINDPORT;
-	memcpy(&dest.sin_addr, address, sizeof(dest.sin_addr));
+	memcpy(&dest.sin_addr, &address, sizeof(dest.sin_addr));
 	memset(&tobind, 0, sizeof(struct sockaddr_in));
 	tobind.sin_family = AF_INET;
 	tobind.sin_port = PNT_BINDPORT;
@@ -34,7 +34,7 @@ struct errep *pnt_traverse_invictus(struct in_addr *address, struct std_conn *re
 		return err;
 	}
         for (int i = 0; i < 3; i++) {
-                if (sendto(sock, msg, strlen(msg), 0, (struct sockaddr *) &dest, siz) < msglen) {
+                if (sendto(sock, msg, strlen(msg), 0, (struct sockaddr *) &dest, siz) < strlen(msg)) {
                         ERREP(err, fnname, "error sending a message to our peer");
                         return err;
                 }
@@ -55,20 +55,20 @@ struct errep *pnt_traverse_invictus(struct in_addr *address, struct std_conn *re
 	return err;
 }
 
-struct errep *pnt_traverse_severain(struct sockaddr_in dest, struct std_conn *res)
+struct errep *pnt_traverse_severain(struct in_addr addr, struct std_conn *res)
 {
 	struct errep *err;
 	char *fnname = "pnt_traverse_severain()";
 	socket_t sock;
-	struct sockaddr_in tobind, reply;
-	char *msg = "PLEASE STOP LYING", buf[strlen(msg)];
-	int msglen = strlen(msg);
-	bool received = false;
+	struct sockaddr_in tobind, reply, dest;
+	char *msg = "PLEASE STOP LYING", buf[strlen(msg)], tempbuf[24];
 	socklen_t siz = sizeof(struct sockaddr);
 
-	memset(tobind, 0, sizeof(struct sockaddr_in));
+	memset(&tobind, 0, sizeof(struct sockaddr_in));
 	tobind.sin_family = AF_INET;
 	tobind.sin_port = PNT_BINDPORT;
+	dest.sin_family = AF_INET;
+	memcpy(&dest.sin_addr, &addr, sizeof(dest.sin_addr));
 	if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		ERREP(err, fnname, "socket for nat traversal could not be created");
 		return err;
@@ -77,21 +77,25 @@ struct errep *pnt_traverse_severain(struct sockaddr_in dest, struct std_conn *re
 		ERREP(err, fnname, "error binding our socket to the designated bindport");
 		return err;
 	}
-	while (!received) {
-		if (sendto(sock, msg, msglen, 0, (struct sockaddr *) &dest, siz) < msglen) {
-			ERREP(err, fnname, "error sending a message to our peer");
-			return err;
+	while (1) {
+		dest.sin_port = 1024;
+		while (dest.sin_port) {
+			if (sendto(sock, msg, strlen(msg), 0, (struct sockaddr *) &dest, siz) < strlen(msg)) {
+				ERREP(err, fnname, "error sending a message to our peer");
+				return err;
+			}
+			fprintf(stdout, "Ping on its way to %s:%d\n", inet_ntop(AF_INET, &dest.sin_addr, tempbuf, sizeof(tempbuf)), dest.sin_port);
+			dest.sin_port++;
 		}
 		if (recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &reply, &siz) < sizeof(buf)) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				dest.sin_port++;
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
 				continue;
-			} else {
+			else {
 				ERREP(err, fnname, "error recovering message from peer");
 				return err;
 			}
 		}
-		received = true;
+		break;
 	}
 	res -> sock = sock;
         memcpy(&res -> address, &reply, sizeof(res -> address));
