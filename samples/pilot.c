@@ -9,7 +9,7 @@ int main(void)
 	struct in_addr addr;
 	struct std_conn conn;
 
-	char *host = "8.8.8.8";
+	char *host = "64.66.67.44";
 	inet_pton(AF_INET, host, &addr);
 	if ((err = pnt_traverse_severain(addr, &conn)) -> msg != NULL) {
 		fprintf(stderr, "%s", ptools_format_errors(err));

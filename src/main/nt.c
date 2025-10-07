@@ -88,13 +88,16 @@ struct errep *pnt_traverse_severain(struct in_addr addr, struct std_conn *res)
 			dest.sin_port++;
 		}
 		if (recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &reply, &siz) < sizeof(buf)) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				continue;
-			else {
+			} else {
 				ERREP(err, fnname, "error recovering message from peer");
 				return err;
 			}
 		}
+		for (int i = 0; i < sizeof(buf); i++)
+			printf("%02X ", buf[i] & 0xFF);
+		printf("\n");
 		break;
 	}
 	res -> sock = sock;
