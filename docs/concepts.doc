@@ -1,0 +1,6 @@
+Terminology:
+Host --- an end-user computer (as opposed to a switch or a router) on a network
+Peer --- one of two hosts participating (or preparing to) in a Prideful NAT communication
+NATdev --- a router implementing Network Address Translation
+
+Library Structure:
