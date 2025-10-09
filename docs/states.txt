@@ -1,0 +1,22 @@
+Establishing a PNT connection is performed as follows:
+1. pnt_traverse() establishes SPI rules for every possible ip:port combination
+with peer_ip as the IP. This is done by sending arbitrary data to every possible
+ip:port combination such as 
+peer_ip:1024
+peer_ip:1025
+peer_ip:1026
+etc. When our SPI-enabled NATdev sees such messages being sent out, it
+unquestioningly creates an SPI rule for each one that looks something like this:
+ALLOW IN peer_ip:dest_port
+Once the data is through the firewall, it will be forwarded by the NAT like
+usual. 
+2a. Both peers ought be performing step 1 in relative tandem. When a message gets
+through to a peer (which will always be the peer that started first, since it
+will have established an SPI rule for its ip:port address before its peer sends
+a message to that ip:port address), if it is a 'hi' message, our host will immediately 
+exit the loop and send an ACK message to its peer with the latter's exact ip:port 
+address now being recorded.
+2aa. We will now wait for an ACK from the peer we ACK'd earlier. Once this ACk
+is received, the connection has been established.
+2b. If the message received is an ACK, we will send out another ACK to our peer,
+and treat the connection as being established.

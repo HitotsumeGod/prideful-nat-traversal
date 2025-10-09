@@ -1,0 +1,31 @@
+In the Case of Multiple Hosts Running PNT on the Same Subnet
+
+Multiple hosts running PNT under the domain of a single NATdev
+poses an obvious problem. A peer attempting to establish a connection
+with any one of these hosts will necessary establish a communication
+with the host bound to the earliest port, since after the first pass
+establishes SPI rules, the next pass will successfully send a 'hello'
+to that numerically earliest port, receive an 'ack' back, and thus
+establish a connection; of course, this will be a poor marriage of two
+unintended peers.
+Clearly, peer identification must be implemented, such that one peer
+receiving a 'hello' from another attempting to speak with a different
+peer should be able to understand that and continue searching for
+its actual, corresponding peer. In implementing this, then, an
+identifier should be tagged to the end of every 'hello' message sent
+by a peer. This identifier should be tied to its host's identity in
+such a way that identifiers have a miniscule chance of ever overlapping,
+but not to such an explicit degree that a third-party with knowledge of
+that host is capable of forging it. As a solution, the identifier should
+be a large number in the doubleword range which is obtained by summing
+a cryptographically secure pseudorandom number and various numerical
+facets of the running host, such as the PID of the current process, the
+highest PID currently on the system, the amount of RAM currently under
+use, etc, etc; the identifier should then be obfuscated through a simple
+XOR function, such as XORing it with the host NATdev's IP address.
+When a peer receives such a 'hello' message, it will associate the
+attached identifier with its own PNT session; at this point, the
+identifier it was sending out is abandoned. The peer should then
+send an 'ack' message with the 
+
+this shit might actually be dogshit lemme think about it

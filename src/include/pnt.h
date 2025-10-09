@@ -15,5 +15,8 @@ struct std_conn {
 };
 
 extern struct errep *pnt_traverse(struct in_addr, float delay, struct std_conn *results);
+extern struct errep *pnt_sendmsg(struct std_conn connection);
+extern struct errep *pnt_recvmsg(struct std_conn connection);
+extern struct errep *pnt_keepalive(struct std_conn connection);
 
 #endif //__PNT_H___
