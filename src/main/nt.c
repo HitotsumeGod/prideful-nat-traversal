@@ -11,13 +11,12 @@
 
 #define NANOSEC		1000000
 #define PNT_BINDPORT 	8668
+#define MAX_SECRET_LEN  24
 
-const char pnt_hi = "PNT_PEER_HELLO";
-const char pnt_ack = "PNT_PEER_ACK";
-const int pnt_hi_len = strlen(pnt_hi);
-const int pnt_ack_len = strlen(pnt_ack);
+char *pnt_hi = "PNT_PEER_HELLO";
+char *pnt_ack = "PNT_PEER_ACK";
 
-struct errep *pnt_traverse(struct in_addr addr, float millis, struct std_conn *res)
+struct errep *pnt_traverse(struct in_addr addr, char *pass, float millis, struct std_conn *res)
 {
 	struct errep *err;
 	char *fnname = "pnt_traverse()";
@@ -26,13 +25,25 @@ struct errep *pnt_traverse(struct in_addr addr, float millis, struct std_conn *r
 	socklen_t siz = sizeof(struct sockaddr);
 	struct timespec sleeptime;
 	word portnum;
-	char buf[pnt_hi_len];
+	char hi_msg[strlen(pnt_hi) + strlen(pass) + 1], ack_msg[strlen(pnt_ack) + strlen(pass) + 1], *buf;
+        int buflen;
 	#ifdef DEBUG
 		char tempbuf[24];
 	#endif
 
+        if (!pass || strlen(pass) > MAX_SECRET_LEN) {
+                ERREP(err, fnname, "secret phrase was either NULL or too large");
+                return err;
+        }
+        buflen = sizeof(hi_msg) > sizeof(ack_msg) ? sizeof(hi_msg) : sizeof(ack_msg);
+        if ((buf = malloc(sizeof(char) * buflen)) == NULL) {
+                ERREP(err, fnname, "could not allocate memory for buffer");
+                return err;
+        }
 	sleeptime.tv_sec = 0;
 	sleeptime.tv_nsec = millis * NANOSEC;
+        snprintf(hi_msg, sizeof(hi_msg), "%s:%s", pnt_hi, pass);
+        snprintf(ack_msg, sizeof(ack_msg), "%s:%s", pnt_ack, pass);
 	memset(&tobind, 0, sizeof(struct sockaddr_in));
 	tobind.sin_family = AF_INET;
 	tobind.sin_port = htons(PNT_BINDPORT);
@@ -55,15 +66,15 @@ struct errep *pnt_traverse(struct in_addr addr, float millis, struct std_conn *r
 				return err;
 			}
 			dest.sin_port = htons(portnum++);
-			if (sendto(sock, pnt_hi, pnt_hi_len, 0, (struct sockaddr *) &dest, siz) == -1) {
+			if (sendto(sock, hi_msg, sizeof(hi_msg), 0, (struct sockaddr *) &dest, siz) == -1) {
 				ERREP(err, fnname, "error sending hi message to our peer");
 				return err;
 			}
 			#ifdef DEBUG
-				fprintf(stdout, "Ping on its way to %s:%d\n", inet_ntop(AF_INET, &dest.sin_addr, tempbuf, sizeof(tempbuf)), ntohs(dest.sin_port));
+				fprintf(stdout, "Sent hello to %s:%d\n", inet_ntop(AF_INET, &dest.sin_addr, tempbuf, sizeof(tempbuf)), ntohs(dest.sin_port));
 			#endif
 		}
-		if (recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT, (struct sockaddr *) &reply, &siz) == -1) {
+		if (recvfrom(sock, buf, buflen, MSG_DONTWAIT, (struct sockaddr *) &reply, &siz) == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 				continue;
 			} else {
@@ -71,22 +82,22 @@ struct errep *pnt_traverse(struct in_addr addr, float millis, struct std_conn *r
 				return err;
 			}
 		}
-		if (strcmp(pnt_hi, buf) == 0) {
-			if (sendto(sock, pnt_ack, pnt_ack_len, 0, (struct sockaddr *) &reply, &siz) == -1) {
+		if (strcmp(hi_msg, buf) == 0) {
+			if (sendto(sock, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &reply, siz) == -1) {
 				ERREP(err, fnname, "error sending ACK message to our peer");
 				return err;
 			}
 			#ifdef DEBUG
-				fprintf(stdout, "Send ACK to %s:%d\n", inet_ntop(AF_INET, &reply.sin_addr, tempbuf, sizeof(tempbuf)), ntohs(reply.sin_port));
+				fprintf(stdout, "Sent ACK to %s:%d\n", inet_ntop(AF_INET, &reply.sin_addr, tempbuf, sizeof(tempbuf)), ntohs(reply.sin_port));
 			#endif
-			if (recvfrom(sock, buf, sizeof(buf), 0, NULL, NULL) == -1) {
-				ERREP(err, fnname, "error recovering ACK messagefrom peer");
+			if (recvfrom(sock, buf, buflen, 0, NULL, NULL) == -1) {
+				ERREP(err, fnname, "error recovering ACK message from peer");
 				return err;
 			}
-			if (strcmp(pnt_ack, buf) == 0)
+			if (strcmp(ack_msg, buf) == 0)
 				break;
-		} else if (strcmp(pnt_ack, buf) == 0) {
-			if (sendto(sock, pnt_ack, pnt_ack_len, 0, (struct sockaddr *) &reply, &siz) == -1) {
+		} else if (strcmp(ack_msg, buf) == 0) {
+			if (sendto(sock, ack_msg, sizeof(ack_msg), 0, (struct sockaddr *) &reply, siz) == -1) {
 				ERREP(err, fnname, "error sending ACK message to our peer");
 				return err;
 			}
@@ -94,8 +105,33 @@ struct errep *pnt_traverse(struct in_addr addr, float millis, struct std_conn *r
 		}
 	}
 	printf("%s\n", buf);
+        free(buf);
 	res -> sock = sock;
         memcpy(&res -> address, &reply, sizeof(res -> address));
 	ERREP(err, fnname, NULL);
 	return err;
+}
+
+//suitable for passing to pthread_create
+void *pnt_keepalive(void *std_conn)
+{
+        struct errep *err;
+        char *fnname = "pnt_keepalive()";
+        struct timespec sleeptime;
+        struct std_conn *conn = (struct std_conn *) std_conn;
+
+        sleeptime.tv_sec = 4;
+	sleeptime.tv_nsec = 0;
+        while (1) {
+                if (nanosleep(&sleeptime, NULL) == -1) {
+                        ERREP(err, fnname, "error sleeping keepalive function");
+                        ptools_format_errors(err);
+                        return;
+                }
+                if ((err = pnt_sendmsg(*conn)) -> msg != NULL) {
+                        ERREP(err -> next, fnname, "error sending keepalive message to peer");
+                        ptools_format_errors(err);
+                        return;
+                }
+        }
 }
